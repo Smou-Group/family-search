@@ -1,225 +1,32 @@
-<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>كشف العائلة</title>
+/* ✅ Watermark */
+.card{
+  position: relative;
+}
 
-<style>
-  :root{--brand:#0f5c6e;}
-  body{font-family:Tahoma,Arial,sans-serif;background:#f7f7f7;padding:20px;margin:0}
+/* علامة مائية */
+.card::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("logo.png"); /* غيّر الاسم لو مختلف */
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 300px;   /* حجم العلامة المائية */
+  opacity: 0.06;            /* شفافية */
+  pointer-events: none;
+  z-index: 0;
+}
 
-  .card{
-    max-width:1000px;
-    margin:0 auto;
-    background:#fff;
-    border-radius:14px;
-    box-shadow:0 10px 30px rgba(0,0,0,.08);
-    padding:18px;
-    position:relative;
-    overflow:hidden;
-  }
+/* محتوى الصفحة فوق العلامة */
+.card > *{
+  position: relative;
+  z-index: 1;
+}
 
-  /* ===== العلامة المائية (اللوجو) ===== */
+/* إعدادات خاصة بالطباعة */
+@media print{
   .card::before{
-    content:"";
-    position:absolute;
-    inset:0;
-    background-image:url("logo.png"); /* اسم ملف اللوجو */
-    background-repeat:no-repeat;
-    background-position:center;
-    background-size:320px;
-    opacity:0.06;
-    pointer-events:none;
-    z-index:0;
+    opacity: 0.08;          /* ممكن تزودها شوي بالطباعة */
+    background-size: 350px;
   }
-
-  /* اجعل كل المحتوى فوق العلامة المائية */
-  .card > *{position:relative;z-index:1}
-
-  h2{text-align:center;margin:0 0 12px}
-
-  .row{
-    display:flex;
-    gap:12px;
-    flex-wrap:wrap;
-    align-items:center;
-    justify-content:center
-  }
-
-  input[type="text"]{
-    padding:12px 14px;
-    min-width:280px;
-    border:1px solid #ddd;
-    border-radius:10px;
-    font-size:16px;
-    outline:none
-  }
-
-  input[type="text"]:focus{
-    border-color:var(--brand);
-    box-shadow:0 0 0 3px rgba(15,92,110,.15)
-  }
-
-  .note{text-align:center;color:#666;margin-top:10px}
-  .pill{
-    display:inline-block;
-    background:rgba(15,92,110,.08);
-    color:var(--brand);
-    padding:6px 10px;
-    border-radius:999px;
-    font-size:13px
-  }
-
-  table{
-    width:100%;
-    border-collapse:collapse;
-    margin-top:14px;
-    background:#fff
-  }
-
-  th,td{
-    border:1px solid #e2e2e2;
-    padding:10px;
-    text-align:right;
-    vertical-align:top
-  }
-
-  th{
-    background:var(--brand);
-    color:#fff;
-    position:sticky;
-    top:0
-  }
-
-  tr:nth-child(even){background:#fafafa}
-
-  .actions{
-    display:flex;
-    gap:8px;
-    justify-content:center;
-    margin-top:10px;
-    flex-wrap:wrap
-  }
-
-  button{
-    border:0;
-    border-radius:10px;
-    padding:10px 14px;
-    cursor:pointer;
-    font-size:14px
-  }
-
-  .btn2{background:#eee}
-  .small{text-align:center;font-size:12px;color:#777;margin-top:8px}
-  .hidden{display:none}
-
-  /* ===== إعدادات الطباعة ===== */
-  @media print{
-    body{background:#fff;padding:0}
-    .card{
-      box-shadow:none;
-      border-radius:0;
-      max-width:none;
-      padding:0
-    }
-    .row,.actions,.small{display:none !important}
-    th{position:static}
-    .card::before{
-      opacity:0.08;
-      background-size:380px
-    }
-    @page{margin:12mm}
-  }
-</style>
-</head>
-
-<body>
-
-<div class="card">
-  <h2>🔎 البحث باسم العائلة</h2>
-
-  <div class="row">
-    <input id="search" type="text" placeholder="اكتب اسم العائلة (مثال: العلي)" autocomplete="off">
-  </div>
-
-  <div class="note" id="info">جاري تحميل البيانات...</div>
-
-  <div class="actions">
-    <button class="btn2" id="clearBtn">مسح البحث</button>
-    <button class="btn2" id="printBtn">طباعة النتائج</button>
-  </div>
-
-  <table id="table" class="hidden">
-    <thead></thead>
-    <tbody></tbody>
-  </table>
-
-  <div class="small">
-    ملاحظة: الملف يتم تحميله تلقائيًا ولا يحتاج المستخدم لرفعه.
-  </div>
-</div>
-
-<script>
-let data=[], headers=[], FAMILY_COL=null;
-const info=document.getElementById("info");
-const table=document.getElementById("table");
-const thead=table.querySelector("thead");
-const tbody=table.querySelector("tbody");
-const searchInput=document.getElementById("search");
-
-const norm=s=>(s??"").toString().replace(/[\u064B-\u0652]/g,"").trim().replace(/\s+/g," ").toLowerCase();
-
-function parseCSV(text){
-  const lines=text.replace(/\r/g,"").trim().split("\n").filter(l=>l.trim());
-  if(!lines.length) return {headers:[],rows:[]};
-  const sep=(lines[0].match(/;/g)||[]).length>(lines[0].match(/,/g)||[]).length?";":",";
-  headers=lines[0].split(sep).map(h=>h.trim());
-  const rows=[];
-  for(let i=1;i<lines.length;i++){
-    const cols=lines[i].split(sep);
-    const o={};
-    headers.forEach((h,j)=>o[h]=(cols[j]??"").trim());
-    rows.push(o);
-  }
-  return {headers,rows};
 }
-
-function detectFamilyColumn(){
-  const cands=["العائلة","اسم العائلة","العائله","Family","family","LastName","surname"];
-  return headers.find(h=>cands.includes(h))||headers.find(h=>h.includes("عائل"))||null;
-}
-
-function render(rows){
-  if(!rows.length){table.classList.add("hidden");return;}
-  thead.innerHTML="<tr>"+headers.map(h=>`<th>${h}</th>`).join("")+"</tr>";
-  tbody.innerHTML=rows.map(r=>"<tr>"+headers.map(h=>`<td>${r[h]??""}</td>`).join("")+"</tr>").join("");
-  table.classList.remove("hidden");
-}
-
-function search(){
-  const q=norm(searchInput.value);
-  if(!data.length||!FAMILY_COL){render([]);return;}
-  if(!q){info.textContent="اكتب اسم العائلة للبحث";render([]);return;}
-  const res=data.filter(r=>norm(r[FAMILY_COL]).includes(q));
-  info.textContent=res.length?`عدد النتائج: ${res.length}`:"لا توجد نتائج";
-  render(res);
-}
-
-fetch("families.csv?v="+Date.now())
-.then(r=>r.text())
-.then(t=>{
-  const p=parseCSV(t);
-  data=p.rows;
-  FAMILY_COL=detectFamilyColumn();
-  search();
-})
-.catch(()=>info.textContent="تعذر تحميل ملف البيانات");
-
-searchInput.addEventListener("input",search);
-document.getElementById("clearBtn").onclick=()=>{searchInput.value="";search();}
-document.getElementById("printBtn").onclick=()=>window.print();
-</script>
-
-</body>
-</html>
