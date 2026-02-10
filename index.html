@@ -188,8 +188,8 @@ function search(){
   renderTable(res);
 }
 
-/* ✅ تحميل الملف تلقائيًا من نفس الموقع */
-fetch("families.csv")
+/* ✅ تحميل الملف تلقائيًا + منع الكاش */
+fetch("families.csv?v=" + Date.now())
   .then(r => {
     if (!r.ok) throw new Error("families.csv not found");
     return r.text();
@@ -207,7 +207,7 @@ fetch("families.csv")
       info.textContent = "⚠️ تم تحميل الملف لكن لم أجد عمود العائلة. راجع عناوين الأعمدة في الصف الأول.";
       return;
     }
-    search(); // يعرض رسالة “البيانات جاهزة…”
+    search();
   })
   .catch(err => {
     info.textContent = "⚠️ تعذر تحميل ملف البيانات (families.csv). تأكد أنه مرفوع بجانب index.html.";
