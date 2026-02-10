@@ -10,6 +10,12 @@
   body{font-family: Tahoma, Arial, sans-serif; background:#f7f7f7; padding:20px; margin:0;}
   .card{max-width:1000px;margin:0 auto;background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.08);padding:18px;}
   h2{margin:0 0 10px 0;text-align:center}
+
+  /* ✅ Header + Logo */
+  .header{display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:8px}
+  .logo{width:110px;max-width:40vw;height:auto;display:block}
+  .brandLine{font-size:13px;color:#666;text-align:center;margin-top:-2px}
+
   .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center}
   input[type="text"]{padding:12px 14px;min-width:280px;border:1px solid #ddd;border-radius:10px;font-size:16px;outline:none}
   input[type="text"]:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(15,92,110,.15)}
@@ -24,11 +30,31 @@
   .btn2{background:#eee}
   .small{font-size:12px;color:#777;text-align:center;margin-top:8px}
   .hidden{display:none}
+
+  /* ✅ Print styles (show logo + hide controls) */
+  @media print{
+    body{background:#fff;padding:0}
+    .card{box-shadow:none;border-radius:0;max-width:none;margin:0;padding:0}
+    .actions, .row, .small{display:none !important;} /* اخفاء البحث والازرار والملاحظة بالطباعة */
+    .note{margin-top:6px}
+    table{margin-top:10px}
+    th{position:static} /* sticky لا نحتاجه بالطباعة */
+    .logo{width:120px}
+    @page{margin:12mm;}
+  }
 </style>
 </head>
 
 <body>
   <div class="card">
+
+    <!-- ✅ Logo Header -->
+    <div class="header">
+      <!-- غيّر اسم الملف لو عندك مختلف -->
+      <img class="logo" src="logo.png" alt="SMOU Logo" />
+      <div class="brandLine">SMOU GROUP</div>
+    </div>
+
     <h2>🔎 البحث باسم العائلة</h2>
 
     <div class="row">
