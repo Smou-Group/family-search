@@ -13,7 +13,6 @@
   .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;justify-content:center}
   input[type="text"]{padding:12px 14px;min-width:280px;border:1px solid #ddd;border-radius:10px;font-size:16px;outline:none}
   input[type="text"]:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(15,92,110,.15)}
-  input[type="file"]{font-size:14px}
   .note{color:#666;margin-top:10px;text-align:center}
   .pill{display:inline-block;background:rgba(15,92,110,.08);color:var(--brand);padding:6px 10px;border-radius:999px;font-size:13px}
   table{width:100%;border-collapse:collapse;margin-top:14px;background:#fff}
@@ -22,7 +21,6 @@
   tr:nth-child(even){background:#fafafa}
   .actions{display:flex;gap:8px;justify-content:center;margin-top:10px;flex-wrap:wrap}
   button{border:0;border-radius:10px;padding:10px 12px;cursor:pointer;font-size:14px}
-  .btn{background:var(--brand);color:#fff}
   .btn2{background:#eee}
   .small{font-size:12px;color:#777;text-align:center;margin-top:8px}
   .hidden{display:none}
@@ -35,12 +33,10 @@
 
     <div class="row">
       <input id="search" type="text" placeholder="اكتب اسم العائلة (مثال: العلي)" autocomplete="off" />
-    <input type="file" id="file" accept=".csv" style="display:none">
-
-     
+      <!-- تم إخفاء/إلغاء رفع الملف للمستخدم -->
     </div>
 
-    <div class="note" id="info">ارفع ملف CSV ثم ابدأ البحث. <span class="pill" id="colpill" class="hidden"></span></div>
+    <div class="note" id="info">جاري تحميل البيانات...</div>
 
     <div class="actions">
       <button class="btn2" id="clearBtn" type="button">مسح البحث</button>
@@ -53,7 +49,7 @@
     </table>
 
     <div class="small">
-      ملاحظة: الملف لا يرفع على الإنترنت—البيانات تبقى داخل جهازك في المتصفح.
+      ملاحظة: الملف يتم تحميله من الموقع تلقائيًا ولا يحتاج المستخدم لرفعه.
     </div>
   </div>
 
@@ -67,7 +63,6 @@ const table = document.getElementById("table");
 const thead = table.querySelector("thead");
 const tbody = table.querySelector("tbody");
 const searchInput = document.getElementById("search");
-const colpill = document.getElementById("colpill");
 
 const norm = s => (s ?? "")
   .toString()
@@ -77,14 +72,12 @@ const norm = s => (s ?? "")
   .toLowerCase();
 
 function detectSeparator(line){
-  // Excel sometimes uses ; depending on locale
   const comma = (line.match(/,/g) || []).length;
   const semi  = (line.match(/;/g) || []).length;
   return semi > comma ? ";" : ",";
 }
 
 function splitCSVLine(line, sep){
-  // supports quotes
   const res = [];
   let cur = "", inQ = false;
   for (let i=0;i<line.length;i++){
@@ -122,7 +115,6 @@ function parseCSV(text){
 }
 
 function detectFamilyColumn(){
-  // priority list
   const candidates = [
     "العائلة",
     "اسم العائلة",
@@ -134,34 +126,15 @@ function detectFamilyColumn(){
     "last_name",
     "surname"
   ];
-
-  // exact match (trim)
   for (const c of candidates){
     const found = headers.find(h => h.trim() === c);
     if (found) return found;
   }
-
-  // fuzzy Arabic contains
   const fuzzy = headers.find(h => h.includes("عائل"));
   if (fuzzy) return fuzzy;
 
-  // contains in English
   const fuzzyEn = headers.find(h => h.toLowerCase().includes("family") || h.toLowerCase().includes("surname") || h.toLowerCase().includes("last"));
   return fuzzyEn || null;
-}
-
-function renderTable(rows){
-  if (!rows.length){
-    table.classList.add("hidden");
-    return;
-  }
-  // header
-  thead.innerHTML = "<tr>" + headers.map(h => `<th>${escapeHtml(h)}</th>`).join("") + "</tr>";
-  // body
-  tbody.innerHTML = rows.map(r => {
-    return "<tr>" + headers.map(h => `<td>${escapeHtml(r[h] ?? "")}</td>`).join("") + "</tr>";
-  }).join("");
-  table.classList.remove("hidden");
 }
 
 function escapeHtml(str){
@@ -173,20 +146,33 @@ function escapeHtml(str){
     .replaceAll("'","&#039;");
 }
 
+function renderTable(rows){
+  if (!rows.length){
+    table.classList.add("hidden");
+    return;
+  }
+  thead.innerHTML = "<tr>" + headers.map(h => `<th>${escapeHtml(h)}</th>`).join("") + "</tr>";
+  tbody.innerHTML = rows.map(r => "<tr>" + headers.map(h => `<td>${escapeHtml(r[h] ?? "")}</td>`).join("") + "</tr>").join("");
+  table.classList.remove("hidden");
+}
+
 function search(){
   const q = norm(searchInput.value);
+
   if (!data.length){
-    info.textContent = "ارفع ملف CSV ثم ابدأ البحث.";
+    info.textContent = "⚠️ البيانات غير جاهزة بعد. انتظر لحظة...";
     renderTable([]);
     return;
   }
+
   if (!FAMILY_COL){
-    info.textContent = "لم أتمكن من تحديد عمود (العائلة). تأكد من وجود عنوان عمود واضح مثل: العائلة / اسم العائلة.";
+    info.textContent = "⚠️ لم أتمكن من تحديد عمود (العائلة) داخل ملف البيانات.";
     renderTable([]);
     return;
   }
+
   if (!q){
-    info.innerHTML = `تم تحميل البيانات. اكتب اسم العائلة للبحث. <span class="pill">عمود البحث: ${escapeHtml(FAMILY_COL)}</span>`;
+    info.innerHTML = `البيانات جاهزة ✔️ اكتب اسم العائلة للبحث. <span class="pill">عمود البحث: ${escapeHtml(FAMILY_COL)}</span>`;
     renderTable([]);
     return;
   }
@@ -197,28 +183,36 @@ function search(){
     renderTable([]);
     return;
   }
+
   info.innerHTML = `عدد النتائج: ${res.length} <span class="pill">عمود البحث: ${escapeHtml(FAMILY_COL)}</span>`;
   renderTable(res);
 }
 
-document.getElementById("file").addEventListener("change", async (e)=>{
-  const f = e.target.files?.[0];
-  if (!f) return;
-  const text = await f.text();
-  const parsed = parseCSV(text);
-  data = parsed.rows;
-  FAMILY_COL = detectFamilyColumn();
-  if (!data.length){
-    info.textContent = "الملف فارغ أو غير مقروء. جرّب حفظه CSV (UTF-8) من Excel.";
-    return;
-  }
-  if (!FAMILY_COL){
-    info.textContent = "تم تحميل الملف، لكن لم أجد عمود العائلة. راجع عناوين الأعمدة في الصف الأول.";
-    return;
-  }
-  info.innerHTML = `تم تحميل الملف. اكتب اسم العائلة للبحث. <span class="pill">عمود البحث: ${escapeHtml(FAMILY_COL)}</span>`;
-  search();
-});
+/* ✅ تحميل الملف تلقائيًا من نفس الموقع */
+fetch("families.csv")
+  .then(r => {
+    if (!r.ok) throw new Error("families.csv not found");
+    return r.text();
+  })
+  .then(text => {
+    const parsed = parseCSV(text);
+    data = parsed.rows;
+    FAMILY_COL = detectFamilyColumn();
+
+    if (!data.length){
+      info.textContent = "⚠️ ملف البيانات فارغ أو غير مقروء. احفظه CSV (UTF-8) من Excel.";
+      return;
+    }
+    if (!FAMILY_COL){
+      info.textContent = "⚠️ تم تحميل الملف لكن لم أجد عمود العائلة. راجع عناوين الأعمدة في الصف الأول.";
+      return;
+    }
+    search(); // يعرض رسالة “البيانات جاهزة…”
+  })
+  .catch(err => {
+    info.textContent = "⚠️ تعذر تحميل ملف البيانات (families.csv). تأكد أنه مرفوع بجانب index.html.";
+    console.error(err);
+  });
 
 searchInput.addEventListener("input", search);
 
